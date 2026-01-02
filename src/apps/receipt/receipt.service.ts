@@ -8,7 +8,6 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { EventKey } from 'src/providers/event/event-key.enum';
 import { PaymentStatus } from 'src/common/enum/payment-status.enum';
 import { DisableReceiptDto } from './dto/disable-receipt.dto';
-import { Types } from 'mongoose';
 
 @Injectable()
 export class ReceiptService {
@@ -17,19 +16,20 @@ export class ReceiptService {
   ) { }
 
   async confirmReceiptAsync(id: string, receiptDto: ReceiptDto): Promise<Receipt | null> {
-    const receipt = await this.receiptModel.findById(id).lean().exec();
+    const receipt = await this.receiptModel.findByIdAndUpdate(
+      id,
+      {
+        ...receiptDto,
+        paymentStatus: PaymentStatus.PAID,
+      },
+      { new: true },
+    ).exec();
+
     if (!receipt) {
       throw new BadRequestException('Recibo não encontrado');
     }
 
-    const updatedReceipt = {
-      ...receipt,
-      ...receiptDto,
-    };
-
-    return await this.receiptModel
-      .findByIdAndUpdate(id, updatedReceipt, { new: true })
-      .exec();
+    return receipt;
   }
 
   @OnEvent(EventKey.GenerateNewReceipts)
@@ -49,7 +49,7 @@ export class ReceiptService {
     while (currentMonth <= endMonth) {
       const paymentDate = new Date(
         currentMonth.getUTCFullYear(),
-        currentMonth.getUTCMonth(),
+        currentMonth.getUTCMonth() + 1,
         paymentDay,
       );
 
@@ -72,9 +72,7 @@ export class ReceiptService {
   @OnEvent(EventKey.UpdateReceipts)
   async updateReceiptsAsync(payload: GenerateReceiptDto): Promise<void> {
     const { rent, user } = payload;
-    console.log(rent);
-    console.log(user);
-    const allReceipts = await this.receiptModel.find({ rent: rent._id}).exec();
+    const allReceipts = await this.receiptModel.find({ rent: rent._id }).exec();
     const receiptsByMonth = new Map<string, ReceiptDocument>();
 
     for (const receipt of allReceipts) {
@@ -95,7 +93,7 @@ export class ReceiptService {
 
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const day = Math.min(rent.paymentDay, daysInMonth);
-      const targetPaymentDate = new Date(year, month, day);
+      const targetPaymentDate = new Date(year, month + 1, day);
 
       const existingReceipt = receiptsByMonth.get(key);
 
@@ -132,7 +130,7 @@ export class ReceiptService {
   @OnEvent(EventKey.DisableReceipts)
   async disableReceiptsAsync(payload: DisableReceiptDto): Promise<void> {
     const { rentId } = payload;
-    await this.receiptModel.updateMany({ rent: rentId, paymentStatus: PaymentStatus.PENDING }, { $set:{ active: false }}).exec();
+    await this.receiptModel.updateMany({ rent: rentId, paymentStatus: PaymentStatus.PENDING }, { $set: { active: false } }).exec();
   }
 
   @OnEvent(EventKey.DeleteReceipts)

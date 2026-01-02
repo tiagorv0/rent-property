@@ -20,7 +20,7 @@ export class TenantService {
       user: userId,
       active: true,
     };
-    return await this.tenantModel.create(tenant);
+    return await new this.tenantModel(tenant).save();
   }
 
   async getTenants(userId: string): Promise<Tenant[]> {

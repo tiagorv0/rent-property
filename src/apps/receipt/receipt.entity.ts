@@ -31,9 +31,18 @@ export class Receipt extends BaseEntity {
 
   @Prop({ type: Types.ObjectId, ref: 'Rent' })
   rent: Rent;
+
+  setPaid(paymentDueDate: Date, paymentMethod: PaymentMethod, observation?: string | null) {
+    this.paymentDueDate = paymentDueDate;
+    this.paymentMethod = paymentMethod;
+    this.observation = observation;
+    this.paymentStatus = PaymentStatus.PAID;
+  }
 }
 
 export const ReceiptSchema = SchemaFactory.createForClass(Receipt);
+
+ReceiptSchema.methods.setPaid = Receipt.prototype.setPaid;
 
 // ReceiptSchema.virtual('paymentMethodLabel').get(function () {
 //   return PaymentMethodHelper.getDescription(this.paymentMethod);

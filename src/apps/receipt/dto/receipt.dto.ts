@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsDateString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsDateString, IsString } from 'class-validator';
 import { PaymentMethod, PaymentMethodHelper } from 'src/common/enum/payment-method.enum';
 
 export class ReceiptDto {
@@ -16,6 +16,7 @@ export class ReceiptDto {
   @IsNotEmpty()
   paymentMethod: PaymentMethod;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
+  @IsString()
   observation?: string | null;
 }
